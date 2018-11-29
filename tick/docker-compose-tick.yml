@@ -13,7 +13,7 @@ services:
         condition: on-failure
     volumes:
       # Mount for chronograf database
-      - chronograf-data:/var/lib/chronograf
+      - /data/chronograf:/var/lib/chronograf
     ports:
       # The WebUI for Chronograf is served on port 8888
       - "8888:8888"
@@ -87,6 +87,5 @@ networks:
   influx:
 
 volumes:
-  chronograf-data:
   kapacitor-data:
   influxdb-data:
