@@ -75,7 +75,7 @@ services:
         condition: on-failure
     volumes:
       # Mount for influxdb data directory
-      - influxdb-data:/var/lib/influxdb
+      - /data/influxdb:/var/lib/influxdb
       # Mount for influxdb configuration
       - /etc/influxdb/config:/etc/influxdb
     ports:
@@ -86,6 +86,3 @@ services:
 networks:
   influx:
 
-volumes:
-  kapacitor-data:
-  influxdb-data:
