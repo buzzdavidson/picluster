@@ -35,7 +35,7 @@ services:
         condition: on-failure
     volumes:
       # Mount for kapacitor data directory
-      - kapacitor-data:/var/lib/kapacitor
+      - /data/kapacitor:/var/lib/kapacitor
       # Mount for kapacitor configuration
       - /etc/kapacitor/config:/etc/kapacitor
     ports:
