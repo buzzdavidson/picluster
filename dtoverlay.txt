@@ -1,0 +1,36 @@
+I keep running into Raspberry Pi articles which refer to various dtoverlay values in config.txt.  Some of these are documented in the default config file (i2c and spi, for example); others have been kind of a mystery to me.  A quick google turned up a couple of pages on the official raspberry pi github page:
+
+https://github.com/raspberrypi/firmware/blob/master/boot/overlays/README
+
+"dtoverlay" refers to device trees:  more info here:
+https://www.raspberrypi.org/documentation/configuration/device-tree.md
+
+There are a *ton* of overlays available, including for all kinds of miscellaneous i2c and SPI devices.  Physical hardware and displays too!
+
+i2c stuff:
+
+Lots of i2c sensors and miscellaneous hardware
+
+i2c-gpio: software i2c controller on GPIO pins
+i2c-mux: support i2c multiplexers (pca9542, etc)
+i2c-rtc: rtc device support (see also i2c-rtc-gpio)
+i2c-pwm-pca9685a: support PWM controller
+mcp23017: GPIO expander
+
+
+GPIO related stuff:
+
+gpio-fan: configure GPIO pin to control a cooling fan
+gpio-ir: infrared remote control
+gpio-key: activate keypresses using gpio
+gpio-poweroff: drive pin high or low at power off (note: interferes with gpio-shotdown)
+gpio-shutdown: shut down system when gpio pin changes, power up again by driving gpio3 low
+pps-gpio: pulse per second output on GPIO pin
+
+Other goodies:
+
+hd44780-lcd: drive text lcd
+lirc-rpi: infrared remote control for pi
+rotary-encoder: GPIO rotary encoder support.  Can wake device!
+
+
