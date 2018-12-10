@@ -1,0 +1,251 @@
+============ Initial configuration
+First we're going to build our base image.
+
+If on mac, download etcher tool: https://www.raspberrypi.org/magpi/pi-sd-etcher/
+
+flash debian stretch lite using etcher
+
+------------ enable SSH on image
+create file called 'ssh' in root of sd card
+> touch {path-to-sd-card-root}/ssh
+
+============ initial image setup
+These changes affect the base image, so this will go to every node in cluster
+
+insert SD card, boot pi
+
+> ssh pi@raspberrypi.local
+
+------------ Change default password
+default password is "raspberry"
+> password raspberry
+enter new password
+
+------------ Update raspbian to latest packages
+sudo apt update && sudo apt upgrade -y
+sudo apt autoclean && sudo apt autoremove
+
+------------ Install some required packages
+sudo apt install emacs-nox
+sudo apt install htop tree
+sudo apt install avahi-utils mdns-scan
+sudo apt install mosquitto-clients
+
+------------ Configure pi boot options
+change /boot/config.txt:
+
+............ Set GPU memory to low value (we aren't running a WM)
+* add line "gpu_mem=16"
+
+............ disable audio (not goiung to need it)
+* uncomment i2c_arm=on, spi=on
+* comment out "dtparam=audio=on"
+* edit /etc/modprobe.d/alsa-blacklist.conf and add line "blacklist snd_bcm2835"
+
+............disable bluetooth
+dtoverlay=pi3-disable-btsu
+
+------------ install docker
+sudo curl -sSL https://get.docker.com | sh
+
+sudo systemctl enable docker
+sudo systemctl start docker
+sudo usermod -aG docker pi
+
+------------ Enable passwordless shutdown: 
+> sudo visudo
+add line: 
+pi ALL=(ALL) NOPASSWD: /sbin/poweroff, /sbin/reboot, /sbin/shutdown
+
+============ Create master SD card image
+
+------------ Mac instructions
+first we need to find out the device name for the SD card.  Insert the card in the host machine and execute
+
+> diskutil list
+
+Make note of SD card device (/dev/disk3)
+
+> sudo dd if=/dev/disk3 of=~/pidocker.dmg
+
+Note: this took about 45 minutes on my desktop!
+
+============ Initial node configuration
+For each node to be created, perform the following:
+
+------------ Duplicate SD card
+Insert SD card in host machine.
+
+Using SD card device name from above step (in this case, it's /dev/disk3):
+
+> dd if=~/pidocker.dmg of=/dev/disk3
+
+Install the newly created SD card in the node and boot it up.  We'll need to configure each node independently:
+
+------------ Update host name
+We need to set the hostname for each node; his change needs to be made in two places:
+
+> nano /etc/hostname
+> nano /etc/hosts
+
+------------ Generate SSH host key
+> ssh-keygen -t rsa -b 2048
+
+accept defaults, no passcode
+
+============ Master node configuration
+At this point we have a set of working cluster nodes.  Power everything up and wait a few moments for things to boot.  The following instructions assume that all nodes are running.
+
+------------ Copy SSH host key from slaves to head node
+Ssh into master node and execute the following for each newly created node:
+
+> cat ~/.ssh/id_rsa.pub | ssh pi@pidocker07.local 'cat >> .ssh/authorized_keys 
+
+The head node can now SSH into all of the slave nodes without a password.
+
+We'll want to test this first - SSH into each node from the head node, answer YES to the ECSDA warning, and exit.  If you can't log in, make sure that the host key was properly appended to the authorized keys file.
+
+------------ Install JDK on head node
+> sudo apt install openjdk-9-jdk-headless
+
+------------ Install Ansible on head node
+> sudo apt install ansible
+
+This will install a bunch of additional packages.  Accept the defaults.
+
+------------ Configure Ansible on head node
+> sudo emacs /etc/ansible/hosts
+
+Add the following entries:
+
+#####################
+pidocker[01:08].local
+
+[cluster_master]
+pidocker[01:03].local
+
+[cluster_slaves]
+pidocker[04:08].local
+#####################
+
+Note: this example assumes 8 nodes total.  Adjust accordingly.
+
+------------ Initialize docker swarm
+> docker swarm init
+
+(command output)
+Swarm initialized: current node (ji1fxc0j1119l6ar30ck6qvc1) is now a manager.
+
+============ Add additional cluster managers
+Swarm can be run in single master mode, but it's safer to have backups.  There should be an odd number of masters in order to avoid "split brain" issues.
+
+On manager node, execute the following:
+ > docker swarm join-token manager
+
+This will output a command string like the following:
+
+docker swarm join --token SWMTKN-1-4q60em1iwu7i4eu8pjzqhgy2o27ptluqmrpowzm6orl3e9s2x0-3863pzjlc2qm0acio653017vs 192.168.55.254:2377
+
+Copy this command and execute it on nodes 2 and 3.  We now have a 3 node swarm cluster with 3 managers.
+
+============ Add remaining workers to swarm
+On manager node, execute the following:
+
+> docker swarm join-token worker
+
+This will output a command string like the following:
+
+To add a worker to this swarm, run the following command:
+
+    docker swarm join --token SWMTKN-1-4q60em1iwu7i4eu8pjzqhgy2o27ptluqmrpowzm6orl3e9s2x0-cbz8bza9eeitsrov1fqagcusj 192.168.55.254:2377
+
+SSH into each remaining node and execute the provided command.
+
+============ Enable Mosquito (MQTT) on swarm
+Unfortunately, mosquito is NOT cluster enabled.  HiveMQ may be a better choice - it is commercial but I believe it has a free tier.  VerneMQ is a free alternative but ARM / rPI is not yet a supported target.
+
+A compose file for docker is provided in the Git repo.
+
+TODO: shared data mount (via BeeGFS or NFS) would allow swarm to ensure that one Mosquitto instance is always active...  Would need to update the compose file accordingly.  Portability would provide much better resilience.
+
+============ Install BeeGFS for shared storage
+
+TODO: document me
+
+============ Install OpenFaas on swarm
+
+TODO: document me
+
+============ Enable TICK stack on swarm
+
+--> NOTE: this section is incomplete!  This would make a good ansible playbook!
+
+sudo mkdir -p /etc/kapacitor/config /etc/telegraf /etc/influxdb/config
+sudo chown -R root:docker /etc/kapacitor /etc/telegraf /etc/influxdb/
+sudo chmod -R g+rw /etc/kapacitor /etc/telegraf /etc/influxdb
+
+See details here: https://github.com/buzzdavidson/picluster
+
+git clone https://github.com/buzzdavidson/picluster.git
+
+TODO finish this section - need to translate from original instructions and use git artifacts
+
+------------ Configure telegraf to monitor MQTT
+TODO
+
+
+============ USB 3 drive mounting
+
+------------ Edit /etc/fstab
+first, discover UUID for drive (we actually want the partition id)
+> sudo blkid
+
+(output)
+. . . (snip) . . .
+/dev/sda1: UUID="cefb387e-01d9-44ba-896d-7147d7bb0c7e" TYPE="ext4" PARTUUID="1c1b8dc0-34ad-4afa-8a07-89c732b0707c"
+
+Next, create a mount point
+> sudo mkdir /data
+
+Next, add an entry at /etc/fstab:
+
+> sudo emacs /etc/fstab
+
+Add the following line:
+
+PARTUUID=1c1b8dc0-34ad-4afa-8a07-89c732b0707c /data     ext4    defaults,noatim\
+e        0       3
+
+Where the PARTUUID value should match that returned by blkid above.
+
+
+============ TODO items
+- Need some way to control device power: shutdown hosts are zombies
+- Can we hook the shutdown process?
+- Basic Mosquitto monitoring via telegraf
+- MQTT dashboard
+- Still need fan control
+
+
+
+
+
+============ Other helpful stuff
+------------ Enabling zeroconf / bonjour
+
+basic zeroconf (avahi) is installed by default on Raspbian.  We installed some useful mDNS tools earlier; see avahi-utils and mdns-scan
+
+------------ Broadcast service via zeroconf
+
+make new file in /etc/avahi/services called picluster.service:
+
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<service-group>
+  <name replace-wildcards="yes">picluster:%h</name>
+  <service>
+    <type>_http._tcp</type>
+    <port>8888</port>
+  </service>
+</service-group>
+
