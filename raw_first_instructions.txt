@@ -30,6 +30,7 @@ sudo apt install emacs-nox
 sudo apt install htop tree
 sudo apt install avahi-utils mdns-scan
 sudo apt install mosquitto-clients
+sudo apt install git
 
 ------------ Configure pi boot options
 change /boot/config.txt:
