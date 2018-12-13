@@ -192,3 +192,29 @@ PermitRootLogin prohibit-password
 ---- Add directory in /data/tftpboot
 ---- Add nfs mount or copy files to new directory
 ---- Remember to restart service isc-dhcp-server and remount nfs uif appropriate
+
+==== Adding beegfs client to pi
+basic instructions here: https://www.beegfs.io/wiki/DownloadInstallationPackages
+
+
+------ This section is no good - no packages provided for arm64hf!
+
+pi steps:
+kernel headers are required for client to build needed kernel stuff...
+
+$ sudo apt install raspberrypi-kernel-headers
+
+Then install beegfs client
+$ wget https://www.beegfs.io/release/latest-stable/dists/beegfs-deb9.list
+$ sudo -i
+# cp beegfs-deb9.list /etc/apt/sources.list.d/
+# wget -q https://www.beegfs.io/release/latest-stable/gpg/DEB-GPG-KEY-beegfs -O- | apt-key add -
+# apt update
+# apt install beegfs-client
+# emacs /etc/beegfs/beegfs-client.conf
+
+add hostname queenbee to file
+
+$ sudo service beegfs-client start
+
+This will take a while!
