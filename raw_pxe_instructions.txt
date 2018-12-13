@@ -1,0 +1,194 @@
+This is partially based upon instructions from here: 
+https://hackaday.com/2018/10/08/hack-my-house-running-raspberry-pi-without-an-sd-card/
+
+... but has been adapted for my configuration (ubuntu 18 lts, beegfs, etc)
+
+==== Initial post-install steps
+# apt update && apt upgrade -y
+# apt install emacs-nox openjdk-11-jdk openssh-server libelf-dev tree
+# ssh-keygen -t rsa -b 2048
+# mkdir /mnt/beegfs
+# mkdir -p /data/beegfs /data/tftpboot /data/nfs
+
+configure two networks; primary wifi, secondary wired with address 192.168.2.1
+
+==== Installing BeeGFS
+---- beegfs setup via admon requires passwordless root login (!)
+edit /etc/ssh/sshd-config
+un-comment line: PermitRootLogin prohibit-password
+
+$ sudo -i
+# ssh-keygen -t rsa -b 2048
+# cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
+
+--- Initial setup
+Using instructions here: https://www.beegfs.io/wiki/DownloadAdmon
+
+# wget https://www.beegfs.io/release/latest-stable/dists/beegfs-deb9.list
+# wget -q https://www.beegfs.io/release/latest-stable/gpg/DEB-GPG-KEY-beegfs -O- | apt-key add -
+# mv beegfs-deb9.list /etc/apt/sources.list.d/
+# apt-get update
+# apt install beegfs-admon
+
+(I used the automatic install, but it didn't succeed.  beegfs-admon setup doesn't appear to work correctly, it kept complaining about missing header files.  I used the manual instrtuctions instead.)
+
+Manual instructions are here: https://www.beegfs.io/wiki/ManualInstallWalkThrough
+
+- do configuration as specified on setup page.  I added the primary host to all four settings.  Note: you *must* have passwordless root ssh configured for this to work.  (TODO: can this be disabled after ssetup?)
+
+==== Set up dhcp for internal network
+# apt install isc-dhcp-server
+
+---- Replace /etc/dhcp/dhcpd.conf with this:
+
+allow booting;
+allow bootp;
+
+option option-66 code 66 = text;
+option option-43 code 43 = text;
+option tftp-server-name "192.168.2.1";
+option option-66 "192.168.2.1";
+option option-43 "Raspberry Pi Boot   ";
+
+filename "pxelinux.0";
+next-server 192.168.2.1;
+
+subnet 192.168.2.0 netmask 255.255.255.0 {
+  pool {
+    range 192.168.2.64 192.168.2.128;
+  }
+  option domain-name-servers 192.168.2.1;
+  option routers 192.168.2.1;
+  option domain-search "beehive";  
+}
+
+==== Set up TFTP
+# apt install tftp-hpa tftpd-hpa xinetd 
+
+Create file /etc/xinetd.d/tftp:
+
+---
+service tftp
+{
+        disable         = no
+        socket_type     = dgram
+        protocol        = udp
+        wait            = yes
+        user            = root
+        server          = /usr/sbin/in.tftpd
+        server_args     = -v -v -v -s /data/tftpboot
+        per_source      = 11
+        flags           = IPv4
+}
+---
+
+==== Install nfs
+# apt install nfs-kernel-server
+
+# emacs /etc/exports
+
+add line:
+/data/nfs/client1 *(rw,sync,no_subtree_check,no_root_squash)
+
+# mkdir -p /data/nfs/client1/boot
+# systemctl enable rpcbind
+# systemctl restart rpcbind
+# systemctl enable nfs-kernel-server
+# systemctl restart nfs-kernel-server
+
+==== Prepare TFTP boot files
+$ wget https://downloads.raspberrypi.org/raspbian_lite_latest
+ (this downloads a zip file)
+
+$ unzip raspbian_lite_latest
+
+(blah blah blah)
+
+$ mkdir ~/rootmnt ~/bootmnt
+(replace this filename with actual unzipped image)
+
+$sudo kpartx -a -v 2018-11-13-raspbian-stretch-lite.img 
+(output)
+add map loop15p1 (253:2): 0 89854 linear 7:15 8192
+add map loop15p2 (253:3): 0 3547136 linear 7:15 98304
+
+mount using the values reported above.  First partition is always boot.
+$ sudo mount /dev/mapper/loop15p1 ~/bootmnt
+$ sudo mount /dev/mapper/loop15p2 ~/rootmnt
+$ sudo cp -a ~/rootmnt/* /data/nfs/client1/
+$ sudo cp -a ~/bootmnt/* /data/nfs/client1/boot/
+$ sudo cp -a /data/nfs/client1/bootcode.bin /data/tftpboot/
+
+---- Perform some image maintenance
+.... Remove SD card stuff from /etc/fstab
+$ emacs /data/nfs/client1/etc/fstab
+remove all entries except for /proc
+
+.... Tweak configuration for our use cases
+edit /boot/config.txt and add the following at the end of the file:
+
+# SMD additions
+
+# We're running headless, so use minimum GPU settings
+gpu_mem=16
+
+# Disable bluetooth
+dtoverlay=pi3-disable-btsu
+
+# Disable wifi
+dtoverlay=pi3-disable-wifi
+
+.... Remove some unwanted stuff
+$ cd /data/nfs/client1
+$ sudo rm var/swap
+
+.... allow DHCP controlled hostnames
+sudo echo localhost > /data/nfs/client1/hostname
+sudo emacs /data/nfs/client1/etc/dhcp/dhclient-enter-hooks.d/unset_old_hostname
+add "unset old_hostname" line
+
+---- Enable SSH access
+$ sudo touch /data/nfs/client1/boot/ssh
+
+---- Edit kernel boot commands
+$ sudo emacs /data/nfs/client1/cmdline.txt
+
+replace with the following:
+
+dwc_otg.lpm_enable=0 console=serial0,115200 console=tty1 root=/dev/nfs nfsroot=\
+192.168.2.1:/data/nfs/client1,udp,v3 rw ip=dhcp rootwait elevator=deadline rootfstype=nfs
+
+(that should all be 1 line)
+
+tail /var/log/syslog and power up the pi.  You should see a line like this:
+
+Dec 12 16:59:40 QueenBee in.tftpd[10985]: RRQ from 192.168.2.64 filename e51d13b5/start.elf
+
+That ID is the id of the pi; we'll need to register it.
+
+$ sudo mkdir /data/tftpboot/e51d13b5
+$ sudo emacs /etc/fstab
+
+Add this line (for each pi!)
+
+/data/nfs/client1/boot /data/tftpboot/e51d13b5 none defaults,bind 0 0
+
+NOTE: this shares the same boot config for all PXE booted hosts.  Since this directory only contains boot files, we could skip this step and simply copy files as needed for each new host.  There's only 23MB of content here.
+
+TODO: shoulnt that mount be read-only?
+
+
+==== Set up docker
+https://docs.docker.com/install/linux/docker-ce/ubuntu/#set-up-the-repository
+
+==== Post-install cleanup
+---- Remove root login via SSH
+edit /etc/ssh/sshd-config, comment out line
+PermitRootLogin prohibit-password
+
+
+==== Adding a new pi to cluster
+---- Add hardware entry to dhcpd.conf
+---- Add directory in /data/tftpboot
+---- Add nfs mount or copy files to new directory
+---- Remember to restart service isc-dhcp-server and remount nfs uif appropriate
