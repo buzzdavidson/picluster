@@ -196,6 +196,7 @@ PermitRootLogin prohibit-password
 ==== Adding beegfs client to pi
 basic instructions here: https://www.beegfs.io/wiki/DownloadInstallationPackages
 
+Ugh. beegfs doesnt build using direct toolchain.  Deferring this for now.
 
 ------ This section is no good - no packages provided for arm64hf!
 
@@ -218,3 +219,53 @@ add hostname queenbee to file
 $ sudo service beegfs-client start
 
 This will take a while!
+
+====
+
+Initialize docker swarm
+
+$ docker swarm init
+
+Swarm initialized: current node (1dt2s8sv0g2jdum7dr2shc9ki) is now a manager.
+
+To add a worker to this swarm, run the following command:
+
+    docker swarm join --token SWMTKN-1-5zmhr9jtpphckadtxk1onrdv03zm4j3lsho1yqyf12fgq6b7xm-axuypql97fshbk1wuw4f5z97c 192.168.55.114:2377
+
+To add a manager to this swarm, run 'docker swarm join-token manager' and follow the instructions.
+
+=== installing rabbitmq
+
+source: https://computingforgeeks.com/how-to-install-latest-rabbitmq-server-on-ubuntu-18-04-lts/
+
+$ wget -O- https://packages.erlang-solutions.com/ubuntu/erlang_solutions.asc | sudo apt-key add -
+$ echo "deb https://packages.erlang-solutions.com/ubuntu bionic contrib" | sudo tee /etc/apt/sources.list.d/rabbitmq.list
+$ sudo apt update
+$ sudo apt -y install erlang
+
+$ wget -O- https://dl.bintray.com/rabbitmq/Keys/rabbitmq-release-signing-key.asc | sudo apt-key add -
+
+$ wget -O- https://www.rabbitmq.com/rabbitmq-release-signing-key.asc | sudo apt-key add -
+
+$ echo "deb https://dl.bintray.com/rabbitmq/debian $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/rabbitmq.list
+
+$ sudo apt update
+$ sudo apt -y install rabbitmq-server
+
+make sure its running:
+
+$ sudo systemctl status  rabbitmq-server.service 
+
+enable management server:
+
+$ sudo rabbitmq-plugins enable rabbitmq_management
+
+sudo rabbitmqctl add_user admin (StrongPassword)
+sudo rabbitmqctl set_user_tags admin administrator
+
+connect in browser to http://localhost:15672/#/
+use admin password
+
+enable mqtt:
+
+$ sudo rabbitmq-plugins enable rabbitmq_mqtt

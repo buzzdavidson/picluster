@@ -1,0 +1,8 @@
+Cluster port assignments
+
+web applications
+
+application			port	type	notes
+------------			-----   -----   ------
+visualizer			8801	HTTP	docker swarm visualizer
+swarmpit			888	HTTP	swarm manager UI (from github)

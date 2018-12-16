@@ -1,0 +1,6 @@
+/data/nfs/client1: root filesystem for raspberry pi
+/data/nfs/shared: shared data root
+
+There is a local bind mount for each rpi that links /data/tftpboot/{id} to /data/nfs/client1/boot; this simplifies PXE booting.  Not sure why these wouldn't be direct symlinks though.  Im totally new to NFS configuration!
+
+most clients will nfs mount /data/nfs/shared at /data/shared.  Primary server has symlink from /data/shared that points to /data/nfs/shared.
