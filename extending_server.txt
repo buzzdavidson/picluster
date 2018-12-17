@@ -3,19 +3,15 @@ making an nfs mount for our shared configuration
 edit /etc/exports, add:
 /data/nfs/shared *(rw,sync,no_subtree_check,no_root_squash)
 
-sudo mkdir /data/nfs/shared
-sudo exportfs -ra
+$ sudo mkdir /data/nfs/shared
+$ sudo exportfs -ra
 
-add new /etc/fstab entry for new shared dir
-(TODO: ADD ME!!!) - this will mount at /data/shared
-
-sudo mkdir -p /data/nfs/shared/config /data/nfs/shared/app /data/nfs/shared/data
-sudo chown -R root:docker /data/nfs/shared
+$ sudo chown -R root:docker /data/nfs/shared
 
 Install swarmpit for docker swarm monitoring
 
-git clone https://github.com/swarmpit/swarmpit -b 1.5.1
-docker stack deploy -c swarmpit/docker-compose.yml swarmpit
+$ git clone https://github.com/swarmpit/swarmpit -b 1.5.1
+$ docker stack deploy -c swarmpit/docker-compose.yml swarmpit
 
 connect to admin interface at localhost:888, login as admin/admin
 
@@ -23,4 +19,9 @@ Install docker visualizer
 
 see data in visualizer dir!
 docker stack deploy -c docker-compose.yml visualizer
+
+note: nodes can be labeled; this can be handy to mark nodes with physical storage, etc.  This can help provide constraints for swarm placement.
+
+Node label command:
+$ docker node update --label-add localstorage worker1
 
