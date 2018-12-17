@@ -1,3 +1,15 @@
 * what is the current compose file format version?
+
+3.7 as of today (12/14/2018)
+
 * how do i create a docker volume for an nfs share?
+
+See compose file for tick stack!
+
+* how do I pass a command line to a container in a stack compose file?
+
+use the command key:
+
+command: "/entrypoint.sh kapacitor --influxdb-host=http://influxdb:5555"
+
 
