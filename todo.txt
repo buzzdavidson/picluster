@@ -1,0 +1,23 @@
+major functionality to install
+-------------------------------
+O Install and configure rabbitmq
+O Test rabbitmq / MQTT stuff
+O Install nuclio (event driven FAAS)
+
+needed but not designed
+------------------------
+O message topic translation: /device/9-8235-285/sensor/temperature/0 to /home/garage/temperature (possibly via nuclio)
+
+nice-to-haves
+--------------
+O report physical hostname via telegraf (or maybe run telegraf on physical host)
+O GPS disciplined NTP server
+
+cleanup tasks
+--------------
+O organize exposed hosts, they are all over the place
+O Test removal of master node pinning for TICK artifacts
+
+longer term but critical
+-------------------------
+O HTTPs, client certificates, secure transport
