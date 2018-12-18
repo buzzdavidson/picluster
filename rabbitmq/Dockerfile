@@ -1,7 +1,12 @@
-FROM rabbitmq:3.6.11-management-alpine
+FROM rabbitmq:3.6.10-management
 
-ADD join.sh /
+MAINTAINER Steve Davidson <buzzdavidson@me.com>
 
-RUN sed -i 's/exec "$@"/\
-    sh -c "while ! nc -z localhost 15672; do sleep 0.1; done; sleep 3; .\/join.sh" \&\
-    \nexec "$@"/' /usr/local/bin/docker-entrypoint.sh
+RUN apt-get update && \
+  apt-get install netcat wget -y && \
+  rm -rf /var/lib/apt/lists/*
+
+COPY entrypoint.sh /sbin/
+RUN chmod +x /sbin/entrypoint.sh
+
+CMD ["/sbin/entrypoint.sh"]

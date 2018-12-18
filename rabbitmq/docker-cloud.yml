@@ -1,0 +1,62 @@
+version: "3.7"
+services:
+  rabbit-master:
+    image: buzzdavidson/rabbitmq-cluster-swarm:latest
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    hostname: rabbit-master
+    networks:
+      - rabbitmq-net
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+    environment:
+      - RABBITMQ_ERLANG_COOKIE=dockerClusterCookie
+      - RABBITMQ_DEFAULT_USER=rabbitmq
+      - RABBITMQ_DEFAULT_PASS=rabbitmq
+      - RABBITMQ_DEFAULT_VHOST=/
+
+  rabbit-slave:
+    image: registry.gitlab.com/nicosingh/rabbitmq-cluster-swarm:latest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - rabbitmq-net
+    deploy:
+      mode: global
+      placement:
+        constraints: [node.role != manager]
+    environment:
+      - SLAVE=true
+      - RABBITMQ_ERLANG_COOKIE=dockerClusterCookie
+
+  telegraf:
+    # Full tag list: https://hub.docker.com/r/library/telegraf/tags/
+    image: telegraf
+    networks:
+      - rabbitmq-net
+      - tick-stack_influx-net
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+    volumes:
+      # Mount for Docker API access
+      - /var/run/docker.sock:/var/run/docker.sock
+    configs:
+      - source: telegraf-cfg
+        target: /etc/telegraf/telegraf.conf
+
+configs:
+  telegraf-cfg:
+    file: ./configs/telegraf.conf
+
+networks:
+  rabbitmq-net:
+    driver: overlay
+    attachable: true
+  tick-stack_influx-net:
+    external: true
