@@ -23,3 +23,11 @@ docker login
 docker tag 8abfaa47af8b buzzdavidson/rabbitmq-cluster-swarm:first
 docker push buzzdavidson/rabbitmq-cluster-swarm:first
 
+* how do I send a test MQTT message?
+
+mosquitto_pub -u mqtt -P mqtt -h queenbee.local -m "test message" -t example/topic
+
+* how do I listen for a test message?
+
+mosquitto_sub -u mqtt -P mqtt -h queenbee.local -t example/topic
+
