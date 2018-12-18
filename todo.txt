@@ -1,7 +1,7 @@
 major functionality to install
 -------------------------------
 X Install and configure rabbitmq
-O Install rabbitmq monitoring
+X Install rabbitmq monitoring
 O Test rabbitmq / MQTT stuff
 O Install nuclio (event driven FAAS)
 
@@ -13,10 +13,11 @@ nice-to-haves
 --------------
 O report physical hostname via telegraf (or maybe run telegraf on physical host)
 O GPS disciplined NTP server
+O chaosmonkey-style master node rotation
 
 cleanup tasks
 --------------
-O organize exposed hosts, they are all over the place
+O organize exposed ports, they are all over the place
 O Test removal of master node pinning for TICK artifacts
 
 longer term but critical
