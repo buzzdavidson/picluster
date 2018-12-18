@@ -107,7 +107,9 @@ services:
 
 networks:
   influx-net:
-
+    driver: overlay
+    attachable: true
+    
 configs:
   influx-cfg:
     file: ./configs/influxdb.conf
@@ -115,6 +117,7 @@ configs:
     file: ./configs/telegraf.conf
   kapacitor-cfg:
     file: ./configs/kapacitor.conf
+
 volumes:
   nfs-volume:
     driver: local
