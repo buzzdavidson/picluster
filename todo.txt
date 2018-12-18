@@ -1,6 +1,7 @@
 major functionality to install
 -------------------------------
-O Install and configure rabbitmq
+X Install and configure rabbitmq
+O Install rabbitmq monitoring
 O Test rabbitmq / MQTT stuff
 O Install nuclio (event driven FAAS)
 

@@ -12,4 +12,14 @@ use the command key:
 
 command: "/entrypoint.sh kapacitor --influxdb-host=http://influxdb:5555"
 
+* why do some images mount /var/run/docker.sock?
+
+* how do I create a swarm-wide network?
+
+* how do I push a docker file to docker hub?
+
+account: buzzdavidson
+docker login
+docker tag 8abfaa47af8b buzzdavidson/rabbitmq-cluster-swarm:first
+docker push buzzdavidson/rabbitmq-cluster-swarm:first
 
