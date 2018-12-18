@@ -5,6 +5,8 @@ services:
     ports:
       - "5673:5672"
       - "15673:15672"
+      - "1883:1883"
+      - "8883:8883"
     hostname: rabbit-master
     networks:
       - rabbitmq-net
