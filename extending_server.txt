@@ -25,3 +25,6 @@ note: nodes can be labeled; this can be handy to mark nodes with physical storag
 Node label command:
 $ docker node update --label-add localstorage worker1
 
+--------------
+
+$ sudo iptables -A FORWARD -i eno1 -o wlp6s0 -s 192.168.2.0/24 -d 192.168.55.1 -j ACCEPT
