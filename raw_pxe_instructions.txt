@@ -7,60 +7,30 @@ https://hackaday.com/2018/10/08/hack-my-house-running-raspberry-pi-without-an-sd
 # apt update && apt upgrade -y
 # apt install emacs-nox openjdk-11-jdk openssh-server libelf-dev tree
 # ssh-keygen -t rsa -b 2048
-# mkdir /mnt/beegfs
-# mkdir -p /data/beegfs /data/tftpboot /data/nfs
+# mkdir -p /data/tftpboot /data/nfs
+
+---- Disable swap file
+$ sudo -i
+# dphys-swapfile swapoff
+# dphys-swapfile uninstall
+# systemctl disable dphys-swapfile
+# systemctl stop dphys-swapfile
+
+
+---------------------
 
 configure two networks; primary wifi, secondary wired with address 192.168.2.1
-
-==== Installing BeeGFS
----- beegfs setup via admon requires passwordless root login (!)
-edit /etc/ssh/sshd-config
-un-comment line: PermitRootLogin prohibit-password
-
-$ sudo -i
-# ssh-keygen -t rsa -b 2048
-# cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
-
---- Initial setup
-Using instructions here: https://www.beegfs.io/wiki/DownloadAdmon
-
-# wget https://www.beegfs.io/release/latest-stable/dists/beegfs-deb9.list
-# wget -q https://www.beegfs.io/release/latest-stable/gpg/DEB-GPG-KEY-beegfs -O- | apt-key add -
-# mv beegfs-deb9.list /etc/apt/sources.list.d/
-# apt-get update
-# apt install beegfs-admon
-
-(I used the automatic install, but it didn't succeed.  beegfs-admon setup doesn't appear to work correctly, it kept complaining about missing header files.  I used the manual instrtuctions instead.)
-
-Manual instructions are here: https://www.beegfs.io/wiki/ManualInstallWalkThrough
-
-- do configuration as specified on setup page.  I added the primary host to all four settings.  Note: you *must* have passwordless root ssh configured for this to work.  (TODO: can this be disabled after ssetup?)
 
 ==== Set up dhcp for internal network
 # apt install isc-dhcp-server
 
----- Replace /etc/dhcp/dhcpd.conf with this:
+---- Replace /etc/dhcp/dhcpd.conf with
+see latest file in github
 
-allow booting;
-allow bootp;
-
-option option-66 code 66 = text;
-option option-43 code 43 = text;
-option tftp-server-name "192.168.2.1";
-option option-66 "192.168.2.1";
-option option-43 "Raspberry Pi Boot   ";
-
-filename "pxelinux.0";
-next-server 192.168.2.1;
-
-subnet 192.168.2.0 netmask 255.255.255.0 {
-  pool {
-    range 192.168.2.64 192.168.2.128;
-  }
-  option domain-name-servers 192.168.2.1;
-  option routers 192.168.2.1;
-  option domain-search "beehive";  
-}
+---- Configure listening interfaces
+$ sudo emacs /etc/default/isc-dhcp-server
+INTERFACESv4="eno1"
+INTERFACESv6="eno1"
 
 ==== Set up TFTP
 # apt install tftp-hpa tftpd-hpa xinetd 
@@ -123,6 +93,24 @@ $ sudo cp -a /data/nfs/client1/bootcode.bin /data/tftpboot/
 .... Remove SD card stuff from /etc/fstab
 $ emacs /data/nfs/client1/etc/fstab
 remove all entries except for /proc
+
+.... Add host entries for cluster nodes
+There's probably a better way to manage this (ie, via BIND9 or other service), but it's just as easy to just add host entries for all nodes:
+
+$ emacs /data/nfs/client1/etc/hosts
+
+add the following lines:
+
+192.168.2.129   pi3-wrk01
+192.168.2.130   pi3-wrk02
+192.168.2.131   pi3-wrk03
+192.168.2.132   pi3-wrk04
+192.168.2.133   pi3-wrk05
+192.168.2.134   pi3-wrk06
+192.168.2.135   pi3-wrk07
+192.168.2.136   pi3-wrk08
+
+keep in mind that all pi hosts use the same disk image, so editing /etc/hostname is not really an option.
 
 .... Tweak configuration for our use cases
 edit /boot/config.txt and add the following at the end of the file:
@@ -269,3 +257,29 @@ use admin password
 enable mqtt:
 
 $ sudo rabbitmq-plugins enable rabbitmq_mqtt
+
+
+==== Installing BeeGFS
+---- beegfs setup via admon requires passwordless root login (!)
+edit /etc/ssh/sshd-config
+un-comment line: PermitRootLogin prohibit-password
+
+$ sudo -i
+# ssh-keygen -t rsa -b 2048
+# cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
+
+--- Initial setup
+Using instructions here: https://www.beegfs.io/wiki/DownloadAdmon
+
+# wget https://www.beegfs.io/release/latest-stable/dists/beegfs-deb9.list
+# wget -q https://www.beegfs.io/release/latest-stable/gpg/DEB-GPG-KEY-beegfs -O- | apt-key add -
+# mv beegfs-deb9.list /etc/apt/sources.list.d/
+# apt-get update
+# apt install beegfs-admon
+
+(I used the automatic install, but it didn't succeed.  beegfs-admon setup doesn't appear to work correctly, it kept complaining about missing header files.  I used the manual instrtuctions instead.)
+
+Manual instructions are here: https://www.beegfs.io/wiki/ManualInstallWalkThrough
+
+- do configuration as specified on setup page.  I added the primary host to all four settings.  Note: you *must* have passwordless root ssh configured for this to work.  (TODO: can this be disabled after ssetup?)
+
