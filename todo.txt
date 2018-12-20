@@ -4,7 +4,7 @@ X Install and configure rabbitmq
 X Install rabbitmq monitoring
 X Test rabbitmq / MQTT stuff
 X Install nuclio (event driven FAAS)
-O Install thingboard
+O Install thingsboard (https://thingsboard.io/docs/user-guide/install/docker/)
 
 needed but not designed
 ------------------------
