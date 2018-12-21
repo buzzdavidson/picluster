@@ -89,5 +89,5 @@ if [ ${DOBIND} == 1 ]; then
     rm ${DATALOCK} > /dev/null 2>&1
 fi
 
-/usr/bin/dockerd -H fd://
+
 
