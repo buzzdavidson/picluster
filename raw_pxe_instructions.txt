@@ -3,7 +3,7 @@ https://hackaday.com/2018/10/08/hack-my-house-running-raspberry-pi-without-an-sd
 
 ... but has been adapted for my configuration (ubuntu 18 lts, beegfs, etc)
 
-==== Initial post-install steps
+==== Initial post-install steps on server
 # apt update && apt upgrade -y
 # apt install emacs-nox openjdk-11-jdk openssh-server libelf-dev tree
 # ssh-keygen -t rsa -b 2048
@@ -16,11 +16,10 @@ $ sudo -i
 # systemctl disable dphys-swapfile
 # systemctl stop dphys-swapfile
 
----------------------
-
+---- configure networking
 configure two networks; primary wifi, secondary wired with address 192.168.2.1
 
-==== Set up dhcp for internal network
+---- Set up dhcp for internal network
 # apt install isc-dhcp-server
 
 ---- Replace /etc/dhcp/dhcpd.conf with
@@ -36,7 +35,6 @@ INTERFACESv6="eno1"
 
 Create file /etc/xinetd.d/tftp:
 
----
 service tftp
 {
         disable         = no
@@ -49,9 +47,9 @@ service tftp
         per_source      = 11
         flags           = IPv4
 }
----
 
-==== Install nfs
+
+---- Install nfs
 # apt install nfs-kernel-server
 
 # emacs /etc/exports
@@ -65,7 +63,7 @@ add line:
 # systemctl enable nfs-kernel-server
 # systemctl restart nfs-kernel-server
 
-==== Prepare TFTP boot files
+---- Prepare TFTP boot files
 $ wget https://downloads.raspberrypi.org/raspbian_lite_latest
  (this downloads a zip file)
 
@@ -111,6 +109,20 @@ add the following lines:
 192.168.2.136   pi3-wrk08
 
 keep in mind that all pi hosts use the same disk image, so editing /etc/hostname is not really an option.
+
+.... Copy service control stuff
+# cd /data/nfs/client1/etc/systemd/system/
+# cp {git repo}/server/setup-docker-data.service .
+# cd multi-user.target.wants
+# ln -siv ../setup-docker-data.service setup-docker-data.service
+
+need to create directory for each node at /data/nfs/hosts/{mac address}
+
+also need to register NFS export by editing /etc/exports
+
+/data/nfs/hosts/b827eb355838 192.168.2.130(rw,sync,no_subtree_check,no_root_squash)/data/nfs/hosts/b827eb355838 192.168.2.130(rw,sync,no_subtree_check,no_root_squash)
+
+note these need to match the associated DHCPD entries!
 
 .... Tweak configuration for our use cases
 edit /boot/config.txt and add the following at the end of the file:
@@ -161,11 +173,26 @@ Add this line (for each pi!)
 
 /data/nfs/client1/boot /data/tftpboot/e51d13b5 none defaults,bind 0 0
 
-NOTE: this shares the same boot config for all PXE booted hosts.  Since this directory only contains boot files, we could skip this step and simply copy files as needed for each new host.  There's only 23MB of content here.
+NOTE: this bind mounts the same boot directory for all PXE booted hosts.  Since this directory only contains boot files, we could skip this step and simply copy files as needed for each new host.  There's only 23MB of content here.
 
 TODO: shoulnt that mount be read-only?
 
 ==== Stuff to do on one booted pi
+---- Setup root password
+$ sudo passwd root
+
+---- Change default pi password
+$ sudo passwd pi
+
+---- Do a system update
+$ raspi-config
+
+perform update, set i8n options, set timezone
+
+---- Enable NTP on pi
+
+there's a command to do this in raspbian, need to look it up again
+
 ---- Use shared memory for temp dir
 $ sudo cp /usr/share/systemd/tmp.mount /etc/systemd/system/tmp.mount
 
@@ -179,6 +206,9 @@ Enable auto mount...
 $ sudo systemctl enable tmp.mount
 $ sudo systemctl start tmp.mount
 
+---- Enable docker data bind script
+$ sudo systemctl enable setup-docker-data.service
+$ sudo systemctl start setup-docker-data.service
 
 ==== Set up docker
 https://docs.docker.com/install/linux/docker-ce/ubuntu/#set-up-the-repository
@@ -188,43 +218,14 @@ https://docs.docker.com/install/linux/docker-ce/ubuntu/#set-up-the-repository
 edit /etc/ssh/sshd-config, comment out line
 PermitRootLogin prohibit-password
 
-
 ==== Adding a new pi to cluster
 ---- Add hardware entry to dhcpd.conf
 ---- Add directory in /data/tftpboot
 ---- Add nfs mount or copy files to new directory
+---- Create mount directory and add export for each host's docker data
 ---- Remember to restart service isc-dhcp-server and remount nfs uif appropriate
 
-==== Adding beegfs client to pi
-basic instructions here: https://www.beegfs.io/wiki/DownloadInstallationPackages
-
-Ugh. beegfs doesnt build using direct toolchain.  Deferring this for now.
-
------- This section is no good - no packages provided for arm64hf!
-
-pi steps:
-kernel headers are required for client to build needed kernel stuff...
-
-$ sudo apt install raspberrypi-kernel-headers
-
-Then install beegfs client
-$ wget https://www.beegfs.io/release/latest-stable/dists/beegfs-deb9.list
-$ sudo -i
-# cp beegfs-deb9.list /etc/apt/sources.list.d/
-# wget -q https://www.beegfs.io/release/latest-stable/gpg/DEB-GPG-KEY-beegfs -O- | apt-key add -
-# apt update
-# apt install beegfs-client
-# emacs /etc/beegfs/beegfs-client.conf
-
-add hostname queenbee to file
-
-$ sudo service beegfs-client start
-
-This will take a while!
-
-====
-
-Initialize docker swarm
+==== Initialize docker swarm (on server)
 
 $ docker swarm init --advertise-addr 192.168.2.1
 Swarm initialized: current node (drbmgrjnd1c7id7v6y0tei047) is now a manager.
@@ -236,7 +237,8 @@ To add a worker to this swarm, run the following command:
 To add a manager to this swarm, run 'docker swarm join-token manager' and follow the instructions.
 
 
-=== installing rabbitmq
+==== installing rabbitmq
+note: we'll be running rabbitmq on the cluster, these instructions dont help
 
 source: https://computingforgeeks.com/how-to-install-latest-rabbitmq-server-on-ubuntu-18-04-lts/
 
