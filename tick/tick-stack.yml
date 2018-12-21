@@ -124,5 +124,5 @@ volumes:
     driver_opts:
       type: nfs
       o: addr=192.168.2.1,nolock,soft,rw
-      device: ":/data/nfs/shared/app"
+      device: ":/data/nfs/shared"
 

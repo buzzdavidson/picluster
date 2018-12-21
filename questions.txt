@@ -31,3 +31,4 @@ mosquitto_pub -u mqtt -P mqtt -h queenbee.local -m "test message" -t example/top
 
 mosquitto_sub -u mqtt -P mqtt -h queenbee.local -t example/topic
 
+* how to I configure Docker to use a specific network interface?

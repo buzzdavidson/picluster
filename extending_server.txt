@@ -1,4 +1,4 @@
-making an nfs mount for our shared configuration
+qmaking an nfs mount for our shared configuration
 
 edit /etc/exports, add:
 /data/nfs/shared *(rw,sync,no_subtree_check,no_root_squash)

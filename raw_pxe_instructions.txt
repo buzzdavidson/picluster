@@ -16,7 +16,6 @@ $ sudo -i
 # systemctl disable dphys-swapfile
 # systemctl stop dphys-swapfile
 
-
 ---------------------
 
 configure two networks; primary wifi, secondary wired with address 192.168.2.1
@@ -101,6 +100,7 @@ $ emacs /data/nfs/client1/etc/hosts
 
 add the following lines:
 
+192.168.2.1     queenbee
 192.168.2.129   pi3-wrk01
 192.168.2.130   pi3-wrk02
 192.168.2.131   pi3-wrk03
@@ -165,6 +165,20 @@ NOTE: this shares the same boot config for all PXE booted hosts.  Since this dir
 
 TODO: shoulnt that mount be read-only?
 
+==== Stuff to do on one booted pi
+---- Use shared memory for temp dir
+$ sudo cp /usr/share/systemd/tmp.mount /etc/systemd/system/tmp.mount
+
+edit /etc/systemd/system/tmp.mount, update Options as follows:
+Options=mode=1777,strictatime,nosuid,nodev,size=64M
+
+This creates a 64M /tmp partition in memory.
+
+Enable auto mount...
+
+$ sudo systemctl enable tmp.mount
+$ sudo systemctl start tmp.mount
+
 
 ==== Set up docker
 https://docs.docker.com/install/linux/docker-ce/ubuntu/#set-up-the-repository
@@ -212,15 +226,15 @@ This will take a while!
 
 Initialize docker swarm
 
-$ docker swarm init
-
-Swarm initialized: current node (1dt2s8sv0g2jdum7dr2shc9ki) is now a manager.
+$ docker swarm init --advertise-addr 192.168.2.1
+Swarm initialized: current node (drbmgrjnd1c7id7v6y0tei047) is now a manager.
 
 To add a worker to this swarm, run the following command:
 
-    docker swarm join --token SWMTKN-1-5zmhr9jtpphckadtxk1onrdv03zm4j3lsho1yqyf12fgq6b7xm-axuypql97fshbk1wuw4f5z97c 192.168.55.114:2377
+    docker swarm join --token SWMTKN-1-4owgr7j6yx611c5mbpv5thxu5tfjwm67k4rml9iam9uk24kpbl-dxjpx5a6r1u60zxgtk6yp4ild 192.168.2.1:2377
 
 To add a manager to this swarm, run 'docker swarm join-token manager' and follow the instructions.
+
 
 === installing rabbitmq
 
