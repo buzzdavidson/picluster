@@ -1,0 +1,76 @@
+version: '3.7'
+
+services:
+  app:
+    image: swarmpit/swarmpit:1.5.1
+    environment:
+      - SWARMPIT_DB=http://db:5984
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - 888:8080
+    networks:
+      - net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 1024M
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+      placement:
+        constraints:
+          - 'node.role == manager'
+          - 'node.labels.arch == x86_64'
+  db:
+    image: klaemo/couchdb:2.0.0
+    volumes:
+      - type: volume
+        source: nfs-volume
+        target: /opt/couchdb/data
+        volume:
+          nocopy: true
+    networks:
+      - net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 512M
+        reservations:
+          cpus: '0.15'
+          memory: 256M
+
+  agent:
+    image: swarmpit/agent:2.0
+    environment:
+      - DOCKER_API_VERSION=1.35
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - net
+    deploy:
+      mode: global
+      resources:
+        limits:
+          cpus: '0.10'
+          memory: 64M
+        reservations:
+          cpus: '0.05'
+          memory: 32M
+      placement:
+        constraints:
+          - 'node.labels.arch == x86_64' 
+
+networks:
+  net:
+    driver: overlay
+
+volumes:
+  nfs-volume:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=192.168.2.1,nolock,soft,rw
+      device: ":/data/nfs/shared"
