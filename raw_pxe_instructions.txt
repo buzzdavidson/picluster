@@ -191,7 +191,7 @@ perform update, set i8n options, set timezone
 
 ---- Enable NTP on pi
 
-there's a command to do this in raspbian, need to look it up again
+sudo timedatectl set-ntp True
 
 ---- Use shared memory for temp dir
 $ sudo cp /usr/share/systemd/tmp.mount /etc/systemd/system/tmp.mount
