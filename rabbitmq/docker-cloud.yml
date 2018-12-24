@@ -20,20 +20,20 @@ services:
       - RABBITMQ_DEFAULT_PASS=rabbitmq
       - RABBITMQ_DEFAULT_VHOST=/
 
-  rabbit-slave:
-    image: registry.gitlab.com/nicosingh/rabbitmq-cluster-swarm:latest
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    networks:
-      - rabbitmq-net
-    deploy:
-      mode: global
-      placement:
-        constraints: [node.role != manager]
-    environment:
-      - SLAVE=true
-      - RABBITMQ_ERLANG_COOKIE=dockerClusterCookie
+#  rabbit-slave:
+#    image: registry.gitlab.com/nicosingh/rabbitmq-cluster-swarm:latest
+#    ports:
+#      - "5672:5672"
+#      - "15672:15672"
+#    networks:
+#      - rabbitmq-net
+#    deploy:
+#      mode: global
+#      placement:
+#        constraints: [node.role != manager]
+#    environment:
+#      - SLAVE=true
+#      - RABBITMQ_ERLANG_COOKIE=dockerClusterCookie
 
   telegraf:
     # Full tag list: https://hub.docker.com/r/library/telegraf/tags/
