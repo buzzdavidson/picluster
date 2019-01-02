@@ -1,0 +1,26 @@
+Message channels
+==================
+
+type	dir	address					notes
+------  -----   ---------                       	-------
+Q	SI	device/{guid}/inbox             	direct commands to device
+T	SO	device/{guid}/sensor/{guid}     	announced sensor values
+T	SO	device/{guid}/actuator/{guid}   	announced actuator values
+Q	SI	device/{guid}/actuator/{guid}/inbox	direct commands to actuator
+T	bi	global/announce				channel for global announcements
+T	MO	system/alert
+T	MO	system/status
+Q	MI	system/inbox
+
+Message Types
+-------------
+
+
+Startup Sequence
+----------------
+* Issue mDNS query for _mqtt._tcp (or _amqp._tcp)
+* If none found, abort
+* send join request to system/inbox
+* wait for response.  Retry on timeout.
+* If not accepted, show error and abort
+
