@@ -1,0 +1,31 @@
+version: "3.7"
+services:
+  rabbit-master:
+    image: buzzdavidson/rabbitmq-cluster-swarm:latest
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+      - "1883:1883"
+      - "8883:8883"
+    hostname: rabbit-master
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - rabbitmq-net
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+    environment:
+      - RABBITMQ_ERLANG_COOKIE=dockerClusterCookie
+      - RABBITMQ_DEFAULT_USER=rabbitmq
+      - RABBITMQ_DEFAULT_PASS=rabbitmq
+      - RABBITMQ_DEFAULT_VHOST=/
+
+networks:
+  rabbitmq-net:
+    driver: overlay
+    attachable: true
+    
+volumes:
+  rabbitmq-data:
