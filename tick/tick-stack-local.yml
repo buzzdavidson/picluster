@@ -1,0 +1,104 @@
+version: '3.7'
+services:
+  # FRONT
+  chronograf:
+    image: chronograf
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - tick-volume:/data
+    ports:
+      # The WebUI for Chronograf is served on port 8888
+      - "8888:8888"
+    networks:
+      - influx-net
+    depends_on:
+      - kapacitor
+      - influxdb
+
+  # MIDDLE
+  kapacitor:
+    # Full tag list: https://hub.docker.com/r/library/kapacitor/tags/
+    image: kapacitor
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - tick-volume:/data
+    ports:
+      # The API for Kapacitor is served on port 9092
+      - "9092:9092"
+    configs:
+      - source: kapacitor-cfg
+        target: /etc/kapacitor/kapacitor.conf
+    networks:
+      - influx-net
+    depends_on:
+      - influxdb
+
+  # BACK
+  telegraf:
+    # Full tag list: https://hub.docker.com/r/library/telegraf/tags/
+    image: telegraf
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+    volumes:
+      # Mount for Docker API access
+      - /var/run/docker.sock:/var/run/docker.sock
+    configs:
+      - source: telegraf-cfg
+        target: /etc/telegraf/telegraf.conf
+    networks:
+      - influx-net
+    depends_on:
+      - influxdb
+      
+  # DATABASE
+  influxdb:
+    # Full tag list: https://hub.docker.com/r/library/influxdb/tags/
+    image: influxdb
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - tick-volume:/data    
+    configs:
+      - source: influx-cfg
+        target: /etc/influxdb/influxdb.conf
+    ports:
+      # The API for InfluxDB is served on port 8086
+      - "8086:8086"
+    networks:
+      - influx-net
+
+networks:
+  influx-net:
+    driver: overlay
+    attachable: true
+    
+configs:
+  influx-cfg:
+    file: ./configs/influxdb.conf
+  telegraf-cfg:
+    file: ./configs/telegraf.conf
+  kapacitor-cfg:
+    file: ./configs/kapacitor.conf
+
+volumes:
+  tick-volume:
+
